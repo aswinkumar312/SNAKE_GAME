@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Snake Game</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 0;
+      padding: 0;
+      height: 100vh;
+      background-color: #f0f0f0;
+      background-image: url('images/background1.jpg');
+      background-size: cover;
+      background-position: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .game-info {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 20px;
+      background: rgba(255, 255, 255, 0.8);
+      color: black;
+      font-size: 18px;
+      position: fixed;
+      top: 0;
+      width: 100%;
+      z-index: 3;
+    }
+
+    canvas {
+      background-color: white;
+      border: 1px solid #000;
+      margin-top: 70px;
+    }
+
+    .popup {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: white;
+      border-radius: 10px;
+      padding: 30px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+      z-index: 4;
+      width: 90%;
+      max-width: 400px;
+    }
+
+    .popup h2 {
+      margin-bottom: 20px;
+      font-size: 24px;
+      text-align: center;
+    }
+
+    .popup input {
+      margin-bottom: 20px;
+      padding: 10px;
+      width: 80%;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      text-align: center;
+    }
+
+    .popup button {
+      padding: 10px 20px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    .popup button:hover {
+      background-color: #45a049;
+    }
+  </style>
+</head>
+<body>
+  <div class="game-info" id="gameInfo">
+    <span id="usernameDisplay">Player: Guest</span>
+    <span id="highScoreDisplay">High Score: 0</span>
+  </div>
+
+  <canvas id="gameCanvas" width="400" height="400"></canvas>
+
+  <div class="popup" id="usernamePopup">
+    <h2>Enter Your Username</h2>
+    <input type="text" id="usernameInput" placeholder="Enter your username">
+    <button onclick="startGame()">Start Game</button>
+  </div>
+
+  <script>
+    let highScore = 0;
+    let username = "Guest";
+
+    // Load the best high score from localStorage on page load
+    window.onload = () => {
+      const savedHighScore = localStorage.getItem("bestHighScore");
+      if (savedHighScore) {
+        highScore = parseInt(savedHighScore);
+        document.getElementById("highScoreDisplay").textContent = `High Score: ${highScore}`;
+      }
+    };
+
+    function startGame() {
+      const usernameInput = document.getElementById("usernameInput").value.trim();
+      username = usernameInput || "Guest";
+      document.getElementById("usernameDisplay").textContent = `Player: ${username}`;
+      document.getElementById("usernamePopup").style.display = "none";
+
+      const canvas = document.getElementById("gameCanvas");
+      const ctx = canvas.getContext("2d");
+
+      const gridSize = 20;
+      const canvasSize = 400;
+      let snake = [{ x: 200, y: 200 }];
+      let direction = { x: 0, y: 0 };
+      let food = spawnFood();
+      let score = 0;
+
+      document.addEventListener("keydown", (event) => {
+        const key = event.key;
+        if (key === "ArrowUp" && direction.y === 0) direction = { x: 0, y: -gridSize };
+        if (key === "ArrowDown" && direction.y === 0) direction = { x: 0, y: gridSize };
+        if (key === "ArrowLeft" && direction.x === 0) direction = { x: -gridSize, y: 0 };
+        if (key === "ArrowRight" && direction.x === 0) direction = { x: gridSize, y: 0 };
+      });
+
+      function gameLoop() {
+        const head = {
+          x: (snake[0].x + direction.x + canvasSize) % canvasSize,
+          y: (snake[0].y + direction.y + canvasSize) % canvasSize,
+        };
+        snake.unshift(head);
+
+        if (head.x === food.x && head.y === food.y) {
+          score++;
+          food = spawnFood();
+        } else {
+          snake.pop();
+        }
+
+        if (snakeCollision(head)) {
+          if (score > highScore) {
+            highScore = score;
+            localStorage.setItem("bestHighScore", highScore); // Save the new high score
+            alert(`New High Score by ${username}: ${highScore}`);
+          } else {
+            alert(`Game Over! Your score: ${score}`);
+          }
+          resetGame();
+          return;
+        }
+
+        drawGame();
+        setTimeout(gameLoop, 100);
+      }
+
+      function drawGame() {
+        ctx.clearRect(0, 0, canvasSize, canvasSize);
+
+        ctx.fillStyle = "green";
+        snake.forEach((segment) => {
+          ctx.fillRect(segment.x, segment.y, gridSize, gridSize);
+        });
+
+        ctx.fillStyle = "red";
+        ctx.fillRect(food.x, food.y, gridSize, gridSize);
+      }
+
+      function spawnFood() {
+        const x = Math.floor(Math.random() * (canvasSize / gridSize)) * gridSize;
+        const y = Math.floor(Math.random() * (canvasSize / gridSize)) * gridSize;
+        return { x, y };
+      }
+
+      function snakeCollision(head) {
+        return snake.slice(1).some((segment) => segment.x === head.x && segment.y === head.y);
+      }
+
+      function resetGame() {
+        snake = [{ x: 200, y: 200 }];
+        direction = { x: 0, y: 0 };
+        food = spawnFood();
+        score = 0;
+      }
+
+      gameLoop();
+    }
+  </script>
+</body>
+</html>
